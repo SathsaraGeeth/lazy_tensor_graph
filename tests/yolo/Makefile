@@ -38,7 +38,7 @@ $(BUILD)/%.o: %.c
 
 run: all
 	@echo ">>> Running..."
-	cd $(ROOT) && ./build/yolo/yolo_test
+	cd $(ROOT) && TENSOR_DISABLE_JIT=1 ./build/yolo/yolo_test
 
 clean:
 	rm -rf $(BUILD)

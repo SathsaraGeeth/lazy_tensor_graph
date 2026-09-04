@@ -51,5 +51,8 @@ the selected backend's build products with:
 The checked-in smoke test covers allocation and materialization of a lazy input
 tensor. It provides a stable sanity check for a clean build; broader JIT
 materialization coverage is still in progress.
+
+Set `TENSOR_DISABLE_JIT=1` to execute supported handwritten host kernels
+directly. The YOLO example uses this mode.
 The larger application examples under `tests/` are retained as development
 workloads and do not yet have a unified runner.

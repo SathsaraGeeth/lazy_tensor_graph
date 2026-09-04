@@ -32,6 +32,7 @@ boolean exec_dispatch_operation(uint32 operation, tensor *output, const tensor *
 
 boolean exec_prepare_kernel(vtensor *node) {
     if (!node || !node->edge) return true;
+    if (getenv("TENSOR_DISABLE_JIT")) return false;
     return is_fused(node->edge->op.op) ? exec_prepare_fused(node)
                                        : graph_jit_prepare(node);
 }
