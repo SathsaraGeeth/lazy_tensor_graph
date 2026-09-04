@@ -30,7 +30,6 @@ Build the shared library.
 Note: A CUDA JIT backend exists, but it has known issues, so do not use it.
 
 Note: Set `TENSOR_DISABLE_JIT=1` to support older examples written before JIT.
-Note: There is a cuda JIT backend, it has known issues so dont use it.
 
 ## Examples
 
