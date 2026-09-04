@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+backend="${1:-generic}"
+
+case "$backend" in
+  generic|cpu|avx2|cuda) ;;
+  *) echo "Unsupported backend: $backend (use generic, cpu, avx2, or cuda)" >&2; exit 2 ;;
+esac
+
+exec make -C "$root_dir" TENSOR_BACKEND="$backend" clean

@@ -1,6 +1,7 @@
 """Lower validated operations to one C translation unit and LLVM bitcode."""
 
 import itertools
+import os
 import pathlib
 import subprocess
 import tempfile
@@ -41,7 +42,7 @@ def emit_bitcode(operations: list[ValidatedOperation], output: pathlib.Path,
         source_path = pathlib.Path(directory) / "operations.c"
         source_path.write_text(source, encoding="utf-8")
         result = subprocess.run(
-            ["clang-18", "-std=c11", "-O1", "-emit-llvm", "-c", "-I",
+            [os.environ.get("CLANG", "clang-18"), "-std=c11", "-O1", "-emit-llvm", "-c", "-I",
              str(pathlib.Path(__file__).resolve().parents[2] / "include"),
              str(source_path), "-o", str(output)], capture_output=True, text=True)
         if result.returncode:

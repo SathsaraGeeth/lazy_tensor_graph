@@ -56,8 +56,7 @@ typedef struct {
 
 
 #if !defined(__riscv)
-int shm_open (const char *name, int oflag, unsigned int mode);
-int shm_unlink(const char *name);
+#include <sys/mman.h>
 #endif
 
 #endif

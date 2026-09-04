@@ -5,6 +5,10 @@ TARGET ?= host
 TENSOR_BACKEND ?= generic
 PYTHON ?= python3
 LLVM_CONFIG ?= llvm-config-18
+CLANG ?= clang-18
+ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+LIB_DIR ?= $(ROOT_DIR)/lib
+OPENMP_FLAGS ?= -fopenmp
 
 SRCS = src/core/tensor.c \
        src/graph/graph.c \
@@ -38,7 +42,7 @@ SRCS = src/core/tensor.c \
        src/kernels/dnn/concat/host.c src/kernels/dnn/pooling/host.c \
        src/kernels/dnn/upsample/host.c src/kernels/dnn/resize_pad_norm/host.c
 
-BUILD_DIR ?= ../../build/tensor/$(TENSOR_BACKEND)
+BUILD_DIR ?= $(ROOT_DIR)/build/tensor/$(TENSOR_BACKEND)
 GENERATED_DIR := $(BUILD_DIR)/generated
 OP_FILES := $(shell find src/kernels -name '*.op' -type f | sort)
 GENERATED_BC := $(GENERATED_DIR)/operations.bc
@@ -91,11 +95,11 @@ DEPS = $(OBJS:.o=.d)
 $(OBJS): Makefile include/tensor_jit.h
 
 ifeq ($(TARGET),host)
-CC = gcc
-CXX = g++
+CC ?= cc
+CXX ?= c++
 SRCS += src/dev_tools/profiler/runtime/host.c
-CFLAGS = -Wall -Wextra -O3 -march=native -fopenmp -I../../include -I. -Iinclude
-CXXFLAGS = -O3 -march=native -iquote ../../include -I. -Iinclude \
+CFLAGS = -Wall -Wextra -O3 -march=native $(OPENMP_FLAGS) -I$(ROOT_DIR)/include -I. -Iinclude
+CXXFLAGS = -O3 -march=native -iquote $(ROOT_DIR)/include -I. -Iinclude \
            $(shell $(LLVM_CONFIG) --cxxflags)
 else
 SRCS += src/dev_tools/profiler/runtime/generic.c
@@ -104,7 +108,7 @@ CC = $(LLVM_BIN)/clang --target=riscv32
 LLC = $(LLVM_BIN)/llc
 LD = $(LLVM_BIN)/ld.lld
 AR = $(LLVM_BIN)/llvm-ar
-CFLAGS = -march=rv32im_zalrsc -mabi=ilp32 -ffreestanding -nostdlib -fno-builtin -O1 -Wall -I../../include -I. -Iinclude
+CFLAGS = -march=rv32im_zalrsc -mabi=ilp32 -ffreestanding -nostdlib -fno-builtin -O1 -Wall -I$(ROOT_DIR)/include -I. -Iinclude
 endif
 
 CFLAGS += $(BACKEND_CFLAGS)
@@ -116,10 +120,10 @@ CXXFLAGS += $(BACKEND_CXXFLAGS)
 
 .PHONY: FORCE test
 
-all: ../../lib/libtensor.a
+all: $(LIB_DIR)/libtensor.a
 
-../../lib/libtensor.a: $(OBJS) FORCE
-	mkdir -p ../../lib
+$(LIB_DIR)/libtensor.a: $(OBJS) FORCE
+	mkdir -p $(LIB_DIR)
 	rm -f $@
 ifeq ($(TARGET),host)
 	ar rcs $@ $(OBJS)
@@ -129,7 +133,7 @@ endif
 
 $(GENERATED_STAMP): $(OP_FILES) $(wildcard src/op_parser/*.py)
 	@mkdir -p $(dir $@)
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) src/op_parser/op_parser.py \
+	CLANG="$(CLANG)" PYTHONDONTWRITEBYTECODE=1 $(PYTHON) src/op_parser/op_parser.py \
 		--device $(OP_DEVICE) src/kernels $(GENERATED_DIR)
 	@touch $@
 
@@ -154,13 +158,13 @@ $(BUILD_DIR)/%.o: %.cpp
 
 $(BUILD_DIR)/%.o: %.cu
 	@mkdir -p $(dir $@)
-	nvcc -O3 -I../../include -I. -Iinclude -c $< -o $@
+	nvcc -O3 -I$(ROOT_DIR)/include -I. -Iinclude -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) ../../bin/test_tensor ../../lib/libtensor.a
+	rm -rf $(BUILD_DIR) $(ROOT_DIR)/bin/test_tensor $(LIB_DIR)/libtensor.a
 
-test: ../../lib/libtensor.a
-	$(CC) $(CFLAGS) src/jit/tests/fusion_all_dtypes.c -o $(BUILD_DIR)/jit_fusion_all_dtypes_test \
-		../../lib/libtensor.a $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) \
+test: $(LIB_DIR)/libtensor.a
+	$(CC) $(CFLAGS) tests/smoke.c -o $(BUILD_DIR)/lazy_tensor_smoke_test \
+		$(LIB_DIR)/libtensor.a $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) \
 		-lstdc++ -lm -ldl -lpthread
-	$(BUILD_DIR)/jit_fusion_all_dtypes_test
+	$(BUILD_DIR)/lazy_tensor_smoke_test
