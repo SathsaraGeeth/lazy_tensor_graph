@@ -33,7 +33,8 @@ The scripts locate Homebrew LLVM 18 automatically. To use a different LLVM
 installation, set `LLVM_CONFIG` to its `llvm-config` executable; the matching
 Clang compiler is then used both for the runtime and generated kernels.
 
-Build products are kept inside the repository in `build/` and `lib/`. Remove
+Build products are kept inside the repository in `build/` and `lib/`. The
+build produces the shared library `lib/libtensor.dylib`. Remove
 the selected backend's build products with:
 
 ```sh

@@ -1,15 +1,14 @@
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-CC      := gcc
+CC      ?= cc
+OPENMP_FLAGS ?= -fopenmp
 CFLAGS  := -Wall -Wextra -g -O0 -std=c11
-CFLAGS  += -I../tensor
-CFLAGS  += -I../tensor/include
 CFLAGS  += -I../../include
-CFLAGS  += -fopenmp
+CFLAGS  += $(OPENMP_FLAGS)
 CFLAGS  += -DENABLE_GRAPH_TRACE
 
-ROOT    := ../tensor
-LIB     := $(ROOT)/../../lib/libtensor.a
+ROOT    := ../..
+LIB     := $(ROOT)/lib/libtensor.dylib
 BUILD   := ../../build/yolo
 BIN     := $(BUILD)/yolo_test
 
@@ -29,7 +28,7 @@ lib:
 
 $(BIN): $(OBJS) $(LIB)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $^ -o $@ -lm -fopenmp
+	$(CC) $(CFLAGS) $^ -o $@ -L$(ROOT)/lib -ltensor -Wl,-rpath,$(ROOT)/lib -lm $(OPENMP_FLAGS)
 	@echo ">>> Built: $@"
 
 $(BUILD)/%.o: %.c
@@ -39,7 +38,7 @@ $(BUILD)/%.o: %.c
 
 run: all
 	@echo ">>> Running..."
-	./$(BIN)
+	cd $(ROOT) && ./build/yolo/yolo_test
 
 clean:
 	rm -rf $(BUILD)

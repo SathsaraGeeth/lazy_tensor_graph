@@ -14,6 +14,16 @@
 #include "yolo.h"
 #include "postprocess.h"
 
+#ifndef YOLO_IMAGE_PATH
+#define YOLO_IMAGE_PATH "tests/yolo/imgs/test.jpg"
+#endif
+#ifndef YOLO_WEIGHTS_PATH
+#define YOLO_WEIGHTS_PATH "tests/yolo/model/yolo_weights.bin"
+#endif
+#ifndef YOLO_OUTPUT_PATH
+#define YOLO_OUTPUT_PATH "tests/yolo/imgs/output_detected.jpg"
+#endif
+
 YoloWeights* load_weights(const char* path, uint32_t* num_weights_out) {
     FILE* wf = fopen(path, "rb");
     if (!wf) {
@@ -69,7 +79,7 @@ void free_weights(YoloWeights* weights, uint32_t num_weights) {
 int main() {
 
     int img_w, img_h, img_c;
-    uint8_t* img_data = stbi_load("/mnt/fileserver/prj/dmctp/user/src/yolo/imgs/test.jpg", &img_w, &img_h, &img_c, 3);
+    uint8_t* img_data = stbi_load(YOLO_IMAGE_PATH, &img_w, &img_h, &img_c, 3);
     if (!img_data) {
         printf("Failed to load image.\n");
         return 1;
@@ -88,7 +98,7 @@ int main() {
     
     if (pp_data) {
         uint32_t num_weights = 0;
-        YoloWeights* weights = load_weights("/mnt/fileserver/prj/dmctp/user/src/yolo/model/yolo_weights.bin", &num_weights);
+        YoloWeights* weights = load_weights(YOLO_WEIGHTS_PATH, &num_weights);
         
         if (weights) {
             extent yolo_in_sh[] = {1, 3, 640, 640};
@@ -106,7 +116,7 @@ int main() {
             scale_bboxes(&nms_boxes, img_w, img_h, 640);
             
             draw_bboxes(img_data, img_w, img_h, img_c, nms_boxes);
-            stbi_write_jpg("/mnt/fileserver/prj/dmctp/user/src/yolo/imgs/output_detected.jpg", img_w, img_h, img_c, img_data, 100);
+	            stbi_write_jpg(YOLO_OUTPUT_PATH, img_w, img_h, img_c, img_data, 100);
 	            
             if (all_boxes.boxes) free(all_boxes.boxes);
             if (nms_boxes.boxes) free(nms_boxes.boxes);

@@ -9,6 +9,7 @@ CLANG ?= clang-18
 ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 LIB_DIR ?= $(ROOT_DIR)/lib
 OPENMP_FLAGS ?= -fopenmp
+SHARED_LIBRARY ?= $(LIB_DIR)/libtensor.dylib
 
 SRCS = src/core/tensor.c \
        src/graph/graph.c \
@@ -98,7 +99,7 @@ ifeq ($(TARGET),host)
 CC ?= cc
 CXX ?= c++
 SRCS += src/dev_tools/profiler/runtime/host.c
-CFLAGS = -Wall -Wextra -O3 -march=native $(OPENMP_FLAGS) -I$(ROOT_DIR)/include -I. -Iinclude
+CFLAGS = -Wall -Wextra -O3 -march=native -fPIC $(OPENMP_FLAGS) -I$(ROOT_DIR)/include -I. -Iinclude
 CXXFLAGS = -O3 -march=native -iquote $(ROOT_DIR)/include -I. -Iinclude \
            $(shell $(LLVM_CONFIG) --cxxflags)
 else
@@ -120,16 +121,12 @@ CXXFLAGS += $(BACKEND_CXXFLAGS)
 
 .PHONY: FORCE test
 
-all: $(LIB_DIR)/libtensor.a
+all: $(SHARED_LIBRARY)
 
-$(LIB_DIR)/libtensor.a: $(OBJS) FORCE
+$(SHARED_LIBRARY): $(OBJS) FORCE
 	mkdir -p $(LIB_DIR)
 	rm -f $@
-ifeq ($(TARGET),host)
-	ar rcs $@ $(OBJS)
-else
-	$(AR) rcs $@ $(OBJS)
-endif
+	$(CXX) -dynamiclib -o $@ $(OBJS) $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) $(OPENMP_FLAGS)
 
 $(GENERATED_STAMP): $(OP_FILES) $(wildcard src/op_parser/*.py)
 	@mkdir -p $(dir $@)
@@ -161,10 +158,9 @@ $(BUILD_DIR)/%.o: %.cu
 	nvcc -O3 -I$(ROOT_DIR)/include -I. -Iinclude -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(ROOT_DIR)/bin/test_tensor $(LIB_DIR)/libtensor.a
+	rm -rf $(BUILD_DIR) $(ROOT_DIR)/bin/test_tensor $(SHARED_LIBRARY)
 
-test: $(LIB_DIR)/libtensor.a
+test: $(SHARED_LIBRARY)
 	$(CC) $(CFLAGS) tests/smoke.c -o $(BUILD_DIR)/lazy_tensor_smoke_test \
-		$(LIB_DIR)/libtensor.a $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) \
-		-lstdc++ -lm -ldl -lpthread
+		-L$(LIB_DIR) -ltensor -Wl,-rpath,$(LIB_DIR) -lm -ldl -lpthread
 	$(BUILD_DIR)/lazy_tensor_smoke_test

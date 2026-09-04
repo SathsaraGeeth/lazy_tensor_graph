@@ -3,9 +3,15 @@
 
 #include "util/util.h"
 
-#define INPUT_PATH      "/mnt/fileserver/prj/dmctp/user/src/isp_pipe/data/0005.png"
-#define CROP_PATH       "/mnt/fileserver/prj/dmctp/user/src/isp_pipe/processed/test_crop.png"
-#define CHANNEL_PATH    "/mnt/fileserver/prj/dmctp/user/src/isp_pipe/processed/test_green.png"
+#ifndef INPUT_PATH
+#define INPUT_PATH      "tests/isp_pipe/data/0005.png"
+#endif
+#ifndef CROP_PATH
+#define CROP_PATH       "tests/isp_pipe/processed/test_crop.png"
+#endif
+#ifndef CHANNEL_PATH
+#define CHANNEL_PATH    "tests/isp_pipe/processed/test_green.png"
+#endif
 
 int main(void) {
     int width    = 0;
