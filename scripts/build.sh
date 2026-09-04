@@ -8,8 +8,8 @@ if [[ $# -gt 0 ]]; then
 fi
 
 case "$backend" in
-  generic|cpu|avx2|cuda) ;;
-  *) echo "Unsupported backend: $backend (use generic, cpu, avx2, or cuda)" >&2; exit 2 ;;
+  generic|cpu) ;;
+  *) echo "Unsupported backend: $backend (use generic or cpu)" >&2; exit 2 ;;
 esac
 
 if [[ -z "${LLVM_CONFIG:-}" ]]; then
@@ -28,11 +28,6 @@ fi
 
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 command -v make >/dev/null || { echo "make is required" >&2; exit 1; }
-if [[ "$backend" == "cuda" ]] && ! command -v nvcc >/dev/null; then
-  echo "The CUDA backend requires nvcc on PATH." >&2
-  exit 1
-fi
-
 llvm_bin="$(dirname "$LLVM_CONFIG")"
 cc="${CC:-$llvm_bin/clang}"
 cxx="${CXX:-$llvm_bin/clang++}"

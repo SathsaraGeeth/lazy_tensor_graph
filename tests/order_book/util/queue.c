@@ -1,7 +1,13 @@
 #include "queue.h"
 
 #include <stdlib.h>
+#if defined(__APPLE__)
+#include <sched.h>
+#define TENSOR_THREAD_YIELD() sched_yield()
+#else
 #include <threads.h>
+#define TENSOR_THREAD_YIELD() thrd_yield()
+#endif
 
 
 bool book_queue_open(BookQueue *queue) {
@@ -46,7 +52,7 @@ BookSnapshot *book_queue_pop(BookQueue *queue) {
         if (atomic_load_explicit(&queue->closed, memory_order_acquire))
             return NULL;
 
-        thrd_yield();
+        TENSOR_THREAD_YIELD();
     }
 }
 

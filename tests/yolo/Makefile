@@ -1,6 +1,6 @@
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-CC      ?= cc
+CC      := $(shell brew --prefix llvm@18)/bin/clang
 OPENMP_FLAGS ?= -fopenmp
 CFLAGS  := -Wall -Wextra -g -O0 -std=c11
 CFLAGS  += -I../../include

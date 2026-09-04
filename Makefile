@@ -67,20 +67,8 @@ JIT_CXX_SRCS += src/jit/gen/cpu/abstract_vec/abstract_vec.cpp
 OP_DEVICE := cpu
 BACKEND_CFLAGS += -DTENSOR_JIT_CPU_BACKEND=1 -DBACKEND_CPU=1
 BACKEND_CXXFLAGS += -DBACKEND_CPU=1
-else ifeq ($(TENSOR_BACKEND),avx2)
-SRCS += src/memory/cpu/memory.c
-SRCS += src/jit/exec/cpu/exec.c src/jit/exec/cpu/memory.c src/jit/exec/cpu/kernel.c src/jit/exec/cpu/fusion.c
-BACKEND_CFLAGS += -mavx2 -DBACKEND_CPU=1
-BACKEND_CXXFLAGS += -DBACKEND_CPU=1
-OP_DEVICE := cpu
-else ifeq ($(TENSOR_BACKEND),cuda)
-SRCS += src/memory/cuda/memory.c src/jit/exec/cuda/memory.c
-JIT_CXX_SRCS += src/jit/exec/cuda/exec.cpp src/jit/gen/cuda/jit.cpp src/jit/gen/cuda/parallel.cpp src/jit/gen/cuda/ptx.cpp
-OP_DEVICE := cuda
-BACKEND_CFLAGS += -DBACKEND_CUDA=1 -I/usr/local/cuda/include
-BACKEND_CXXFLAGS += -DBACKEND_CUDA=1 -I/usr/local/cuda/include
 else
-$(error Unsupported TENSOR_BACKEND '$(TENSOR_BACKEND)'; use generic, cpu, avx2, or cuda)
+$(error Unsupported TENSOR_BACKEND '$(TENSOR_BACKEND)'; use generic or cpu)
 endif
 
 SRCS += src/kernels/primitive/jit.c
@@ -119,7 +107,7 @@ CXXFLAGS += $(BACKEND_CXXFLAGS)
 
 -include $(DEPS)
 
-.PHONY: FORCE test
+.PHONY: FORCE
 
 all: $(SHARED_LIBRARY)
 
@@ -153,14 +141,5 @@ $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: %.cu
-	@mkdir -p $(dir $@)
-	nvcc -O3 -I$(ROOT_DIR)/include -I. -Iinclude -c $< -o $@
-
 clean:
 	rm -rf $(BUILD_DIR) $(ROOT_DIR)/bin/test_tensor $(SHARED_LIBRARY)
-
-test: $(SHARED_LIBRARY)
-	$(CC) $(CFLAGS) tests/smoke.c -o $(BUILD_DIR)/lazy_tensor_smoke_test \
-		-L$(LIB_DIR) -ltensor -Wl,-rpath,$(LIB_DIR) -lm -ldl -lpthread
-	$(BUILD_DIR)/lazy_tensor_smoke_test

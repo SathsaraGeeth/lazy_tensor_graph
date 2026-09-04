@@ -11,7 +11,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__APPLE__)
+#include <sched.h>
+#define TENSOR_THREAD_YIELD() sched_yield()
+#else
 #include <threads.h>
+#define TENSOR_THREAD_YIELD() thrd_yield()
+#endif
 
 #define BOOK_CAPACITY 1000
 #define INITIAL_DEPTH_LIMIT 100
@@ -361,7 +367,7 @@ static bool worker_push(NetworkWorker *worker, BookEvent event) {
            EVENT_QUEUE_DEPTH) {
         if (atomic_load_explicit(&worker->stream->stop, memory_order_relaxed))
             return false;
-        thrd_yield();
+        TENSOR_THREAD_YIELD();
     }
     worker->events[tail % EVENT_QUEUE_DEPTH] = event;
     atomic_store_explicit(&worker->tail, tail + 1, memory_order_release);
@@ -448,7 +454,7 @@ static bool next_event(BookStream *stream, BookEvent *event, extent *cursor) {
             return false;
         if (atomic_load_explicit(&stream->stop, memory_order_relaxed))
             return false;
-        thrd_yield();
+        TENSOR_THREAD_YIELD();
     }
 }
 
@@ -458,7 +464,7 @@ static void copy_book(const Book *book, BookSnapshot *snapshot,
     do {
         before = atomic_load_explicit(&book->sequence, memory_order_acquire);
         if (before & 1) {
-            thrd_yield();
+            TENSOR_THREAD_YIELD();
             after = before + 1;
             continue;
         }

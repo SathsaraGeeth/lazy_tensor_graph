@@ -1,58 +1,68 @@
 # Lazy Tensor Graph
 
-This repository contains a graph-based lazy tensor runtime. It provides a DSL
-for defining kernels, generates a kernel registry, and JIT-compiles operations
-for generic CPU, optimized CPU, and CUDA execution backends.
+This repository contains a graph-based lazy tensor runtime.
+
+For architecture details, features, and additional project information, see
+the [Tensor Library project page](https://geethsathsara.com/projects/tensor_library/).
 
 ## Quick start
 
-The host build requires Python 3, GNU Make, a C/C++ compiler with OpenMP
-support, and LLVM 18. On macOS, install the required toolchain with
-`brew install llvm@18 libomp`.
+Prerequisites:
 
-Build the default generic CPU backend:
+- Python 3
+- GNU Make
+- A C/C++ compiler with OpenMP support
+- LLVM 18
 
-```sh
-./scripts/build.sh
-```
-
-Build and run the smoke test:
+Build the shared library.
 
 ```sh
-./scripts/run.sh
+./scripts/build.sh generic  # generic
+./scripts/build.sh cpu      # optimized CPU (default)
 ```
 
-Select another backend explicitly:
-
-```sh
-./scripts/build.sh cpu
-./scripts/run.sh avx2
-```
-
-The scripts locate Homebrew LLVM 18 automatically. To use a different LLVM
-installation, set `LLVM_CONFIG` to its `llvm-config` executable; the matching
-Clang compiler is then used both for the runtime and generated kernels.
-
-Build products are kept inside the repository in `build/` and `lib/`. The
-build produces the shared library `lib/libtensor.dylib`. Remove
-the selected backend's build products with:
-
-```sh
-./scripts/clean.sh generic
-```
 
 ## Backend status
 
-- `generic`: portable host CPU backend; the default and recommended starting point.
-- `cpu`: optimized CPU JIT backend.
-- `avx2`: CPU backend compiled with AVX2 instructions; use only on supported CPUs.
-- `cuda`: experimental; it requires `nvcc` and a CUDA toolkit, and currently has known issues.
+- `generic`: Portable host CPU backend; the baseline.
+- `cpu`: Optimized CPU JIT backend.
 
-The checked-in smoke test covers allocation and materialization of a lazy input
-tensor. It provides a stable sanity check for a clean build; broader JIT
-materialization coverage is still in progress.
+Note: A CUDA JIT backend exists, but it has known issues, so do not use it.
 
-Set `TENSOR_DISABLE_JIT=1` to execute supported handwritten host kernels
-directly. The YOLO example uses this mode.
-The larger application examples under `tests/` are retained as development
-workloads and do not yet have a unified runner.
+Note: Set `TENSOR_DISABLE_JIT=1` to support older examples written before JIT.
+Note: There is a cuda JIT backend, it has known issues so dont use it.
+
+## Examples
+
+Build the shared library once with `./scripts/build.sh`.
+
+
+Then run any example from the repository root.
+
+### ISP pipeline
+
+Processes the test image and writes a crop plus green-channel image into
+`tests/isp_pipe/processed/`.
+
+```sh
+make -C tests/isp_pipe run
+```
+
+### YOLOv5n inference
+
+Runs YOLOv5n and writes the annotated image to `tests/yolo/imgs/output_detected.jpg`.
+
+```sh
+make -C tests/yolo run
+```
+
+### Live order book pipeline
+
+Requires `cjson`.
+
+Connects to Binance, initializes the active order books, and runs the
+order-book tensor graph.
+
+```sh
+make -C tests/order_book run
+```
