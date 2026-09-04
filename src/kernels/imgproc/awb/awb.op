@@ -1,0 +1,52 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+end define
+
+declare
+  name awb;
+  id 0x00010005;
+  in x: uint16 [H, W];
+  param r_gain: real32;
+  param g_gain: real32;
+  param b_gain: real32;
+  param bayer: uint32;
+  param white_level: uint32;
+  out o: uint16 [H, W];
+end declare
+
+code begin
+  algorithm direct begin
+  uint64 y = point_index / W;
+  uint64 col = point_index - y * W;
+  uint32 row_odd = (uint32)(y & 1);
+  uint32 col_odd = (uint32)(col & 1);
+  real32 gain;
+  if (bayer == 0)
+    gain = row_odd ? (col_odd ? b_gain : g_gain)
+                   : (col_odd ? g_gain : r_gain);
+  else if (bayer == 1)
+    gain = row_odd ? (col_odd ? r_gain : g_gain)
+                   : (col_odd ? g_gain : b_gain);
+  else if (bayer == 2)
+    gain = row_odd ? (col_odd ? g_gain : b_gain)
+                   : (col_odd ? r_gain : g_gain);
+  else
+    gain = row_odd ? (col_odd ? g_gain : r_gain)
+                   : (col_odd ? b_gain : g_gain);
+  int32 gain_q = (int32)(gain * 4096.0f + 0.5f);
+  int32 value = ((int32)x * gain_q + 2048) >> 12;
+  if (value < 0) value = 0;
+  if ((uint32)value > white_level) value = (int32)white_level;
+  o = (uint16)value;
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: true;
+  target direct: all;
+  operations direct: point_count * 8;
+endhints

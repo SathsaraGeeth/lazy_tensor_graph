@@ -1,0 +1,62 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+  dim C;
+end define
+
+declare
+  name blend_rgb2yuv;
+  id 0x0001000a;
+  in first: uint16 [H, W, C];
+  in second: uint16 [H, W, C];
+  param alpha: real32;
+  param beta: real32;
+  param white_level: uint32;
+  out o: uint16 [H, W, C];
+end declare
+
+code begin
+  algorithm direct begin
+  int32 alpha_q = (int32)(alpha * 4096.0f + 0.5f);
+  int32 beta_q = (int32)(beta * 4096.0f + 0.5f);
+  int32 half_white = (int32)(white_level / 2);
+  for (uint64 pixel = 0; pixel < H * W; ++pixel) {
+    uint64 index = pixel * C;
+    int32 red = (alpha_q * (int32)first[index] +
+                 beta_q * (int32)second[index] + 2048) >> 12;
+    int32 green = (alpha_q * (int32)first[index + 1] +
+                   beta_q * (int32)second[index + 1] + 2048) >> 12;
+    int32 blue = (alpha_q * (int32)first[index + 2] +
+                  beta_q * (int32)second[index + 2] + 2048) >> 12;
+    if (red < 0) red = 0;
+    if (green < 0) green = 0;
+    if (blue < 0) blue = 0;
+    if ((uint32)red > white_level) red = (int32)white_level;
+    if ((uint32)green > white_level) green = (int32)white_level;
+    if ((uint32)blue > white_level) blue = (int32)white_level;
+    int32 y = (306 * red + 601 * green + 117 * blue + 512) >> 10;
+    int32 u = ((-173 * red - 339 * green + 512 * blue + 512) >> 10) +
+              half_white;
+    int32 v = ((512 * red - 429 * green - 83 * blue + 512) >> 10) +
+              half_white;
+    if (y < 0) y = 0;
+    if (u < 0) u = 0;
+    if (v < 0) v = 0;
+    if ((uint32)y > white_level) y = (int32)white_level;
+    if ((uint32)u > white_level) u = (int32)white_level;
+    if ((uint32)v > white_level) v = (int32)white_level;
+    o[index] = (uint16)y;
+    o[index + 1] = (uint16)u;
+    o[index + 2] = (uint16)v;
+  }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H * W * 38 + 4;
+endhints

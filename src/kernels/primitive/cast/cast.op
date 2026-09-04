@@ -1,0 +1,22 @@
+define
+  type Tin = any;
+  type Tout = any;
+  devices all = {generic, cpu, cuda};
+end define
+declare
+  name cast;
+  id 0x00030003;
+  in x: Tin [**];
+  out o: Tout [**];
+end declare
+code begin
+  algorithm direct begin
+    o = x;
+    return false;
+  endalgorithm: direct
+endcode
+hints begin
+  pointwise: true;
+  target direct: all;
+  operations direct: point_count;
+endhints

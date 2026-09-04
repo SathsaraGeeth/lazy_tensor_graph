@@ -1,0 +1,51 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+end define
+
+declare
+  name dpc;
+  id 0x00010004;
+  in x: uint16 [H, W];
+  param threshold: uint32;
+  out o: uint16 [H, W];
+end declare
+
+code begin
+  algorithm direct begin
+  for (uint64 y = 0; y < H; ++y)
+    for (uint64 col = 0; col < W; ++col) {
+      uint64 index = y * W + col;
+      if (y < 2 || y + 2 >= H || col < 2 || col + 2 >= W) {
+        o[index] = x[index];
+        continue;
+      }
+      uint16 n[8] = {
+        x[(y - 2) * W + col - 2], x[(y - 2) * W + col],
+        x[(y - 2) * W + col + 2], x[y * W + col - 2],
+        x[y * W + col + 2], x[(y + 2) * W + col - 2],
+        x[(y + 2) * W + col], x[(y + 2) * W + col + 2]
+      };
+      uint16 minimum = n[0], maximum = n[0];
+      for (uint32 i = 1; i < 8; ++i) {
+        if (n[i] < minimum) minimum = n[i];
+        if (n[i] > maximum) maximum = n[i];
+      }
+      uint16 pixel = x[index];
+      uint32 high = pixel > maximum ? (uint32)(pixel - maximum) : 0;
+      uint32 low = pixel < minimum ? (uint32)(minimum - pixel) : 0;
+      uint16 replacement =
+        (uint16)(((uint32)n[1] + n[3] + n[4] + n[6] + 2) >> 2);
+      o[index] = high > threshold || low > threshold ? replacement : pixel;
+    }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H > 4 && W > 4 ? (H - 4) * (W - 4) * 7 : 0;
+endhints

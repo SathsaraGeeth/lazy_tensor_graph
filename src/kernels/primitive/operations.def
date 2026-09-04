@@ -1,0 +1,21 @@
+TENSOR_API(vtensor *, tensor_slice, (const vtensor *input, extent rank, const extent *starts, const extent *ends))
+TENSOR_API(vtensor *, tensor_copy, (const vtensor *input))
+TENSOR_API(vtensor *, tensor_cast, (const vtensor *input, dtype_t dtype))
+TENSOR_API(vtensor *, tensor_reshape, (const vtensor *input, extent rank, const extent *shape))
+TENSOR_API(vtensor *, tensor_permute, (const vtensor *input, extent rank, const extent *permutation))
+TENSOR_API(vtensor *, tensor_expand, (const vtensor *input, extent rank, const extent *shape))
+
+TENSOR_OPERATION(ADD, TENSOR_OPERATION_BASE + 0x0001u,
+                 add_ker, add_lower, 2, 0)
+TENSOR_OPERATION(COPY, TENSOR_OPERATION_BASE + 0x0002u,
+                 copy_ker, copy_lower, 1, 0)
+TENSOR_OPERATION(CAST, TENSOR_OPERATION_BASE + 0x0003u,
+                 cast_ker, cast_lower, 1, 0)
+TENSOR_OPERATION(RESHAPE, TENSOR_OPERATION_BASE + 0x0004u,
+                 reshape_ker, reshape_lower, 1, 0)
+TENSOR_OPERATION(PERMUTE, TENSOR_OPERATION_BASE + 0x0005u,
+                 permute_ker, permute_lower, 1, sizeof(extent) * 8)
+TENSOR_OPERATION(SLICE, TENSOR_OPERATION_BASE + 0x0006u,
+                 slice_ker, slice_lower, 1, sizeof(extent) * 64)
+TENSOR_OPERATION(EXPAND, TENSOR_OPERATION_BASE + 0x0007u,
+                 expand_ker, expand_lower, 1, 0)

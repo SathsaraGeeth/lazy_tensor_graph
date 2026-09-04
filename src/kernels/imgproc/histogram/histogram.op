@@ -1,0 +1,30 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim B;
+end define
+
+declare
+  name histogram;
+  id 0x0001000e;
+  in x: T [**];
+  out o: uint32 [B];
+end declare
+
+code begin
+  algorithm direct begin
+  for (uint64 i = 0; i < x_size; ++i) {
+    real64 normalized = ((real64)x[i] - x_min) / x_range;
+    uint64 bin = (uint64)(normalized * (real64)B);
+    if (bin >= B) bin = B - 1;
+    __atomic_fetch_add(&o[bin], 1u, __ATOMIC_RELAXED);
+  }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: x_size * 4;
+endhints

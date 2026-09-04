@@ -1,0 +1,31 @@
+define
+  type      T = {real32, real64};
+  devices all = {generic, cpu, cuda};
+  dim L;
+enddefine
+
+declare
+  name microprice;
+  id 0x00050001;
+  in  bid_price:    T [L];
+  in  bid_quantity: T [L];
+  in  ask_price:    T [L];
+  in  ask_quantity: T [L];
+  out o:            T [L];
+enddeclare
+
+code begin
+  algorithm direct begin
+    T total = (T)(bid_quantity + ask_quantity);
+    o = total == (T)0
+      ? (T)((bid_price + ask_price) / (T)2)
+      : (T)((ask_price * bid_quantity + bid_price * ask_quantity) / total);
+    return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise:         true;
+  target direct:     all;
+  operations direct: 8 * point_count;
+endhints

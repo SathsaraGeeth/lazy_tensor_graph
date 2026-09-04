@@ -1,0 +1,34 @@
+TENSOR_API(vtensor *, tensor_brightness, (const vtensor *input, real32 amount))
+TENSOR_API(vtensor *, tensor_lut, (const vtensor *input, const vtensor *table))
+TENSOR_API(vtensor *, tensor_gamma_correction, (const vtensor *input, real32 gamma, extent entries))
+TENSOR_API(vtensor *, tensor_histogram, (const vtensor *input, extent bins))
+TENSOR_API(vtensor *, tensor_histogram_equalization, (const vtensor *input, extent bins))
+TENSOR_API(vtensor *, tensor_blc, (const vtensor *input, real32 r, real32 gr, real32 gb, real32 b, uint32 bayer, uint32 white_level))
+TENSOR_API(vtensor *, tensor_dpc, (const vtensor *input, uint32 threshold))
+TENSOR_API(vtensor *, tensor_awb, (const vtensor *input, real32 r_gain, real32 g_gain, real32 b_gain, uint32 bayer, uint32 white_level))
+TENSOR_API(vtensor *, tensor_demosaic, (const vtensor *input, uint32 bayer))
+TENSOR_API(vtensor *, tensor_ccm, (const vtensor *input, const vtensor *matrix, uint32 white_level))
+TENSOR_API(vtensor *, tensor_blur, (const vtensor *input))
+TENSOR_API(vtensor *, tensor_blend_rgb2yuv, (const vtensor *first, const vtensor *second, real32 alpha, real32 beta, uint32 white_level))
+TENSOR_API(vtensor *, tensor_chroma_subsample, (const vtensor *input))
+
+/*
+ * TENSOR_OPERATION(NAME, UNIQUE_OP_ID, KERNEL_DESCRIPTOR, LOWERING_FUNCTION,
+ *                  INPUT_COUNT, PARAMETER_BYTE_SIZE) 
+ */
+
+TENSOR_OPERATION(BRIGHTNESS, TENSOR_OPERATION_BASE + 0x0001u, brightness_ker, brightness_lower, 1, sizeof(real32))
+TENSOR_OPERATION(LUT, TENSOR_OPERATION_BASE + 0x0008u, lut_ker, lut_lower, 2, 0)
+TENSOR_OPERATION(HISTOGRAM, TENSOR_OPERATION_BASE + 0x000eu, histogram_ker, histogram_lower, 1, 0)
+TENSOR_OPERATION(HISTOGRAM_EQUALIZATION, TENSOR_OPERATION_BASE + 0x000fu,
+                 histogram_equalization_ker, histogram_equalization_lower, 1, 0)
+
+
+TENSOR_OPERATION(BLC, TENSOR_OPERATION_BASE + 0x0003u, blc_ker, blc_lower, 1, 24)
+TENSOR_OPERATION(DPC, TENSOR_OPERATION_BASE + 0x0004u, dpc_ker, dpc_lower, 1, 4)
+TENSOR_OPERATION(AWB, TENSOR_OPERATION_BASE + 0x0005u, awb_ker, awb_lower, 1, 20)
+TENSOR_OPERATION(DEMOSAIC, TENSOR_OPERATION_BASE + 0x0006u, demosaic_ker, demosaic_lower, 1, 4)
+TENSOR_OPERATION(CCM, TENSOR_OPERATION_BASE + 0x0007u, ccm_ker, ccm_lower, 2, 4)
+TENSOR_OPERATION(BLUR, TENSOR_OPERATION_BASE + 0x0009u, blur_ker, blur_lower, 1, 0)
+TENSOR_OPERATION(BLEND_RGB2YUV, TENSOR_OPERATION_BASE + 0x000au, blend_rgb2yuv_ker, blend_rgb2yuv_lower, 2, 12)
+TENSOR_OPERATION(CHROMA_SUBSAMPLE, TENSOR_OPERATION_BASE + 0x000bu, chroma_subsample_ker, chroma_subsample_lower, 1, 0)

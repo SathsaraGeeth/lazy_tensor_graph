@@ -1,0 +1,14 @@
+TENSOR_OPERATION(CONV2D, TENSOR_OPERATION_BASE + 0x0001u,
+                 conv2d_ker, conv2d_lower, 2, 4 * sizeof(extent))
+TENSOR_OPERATION(CONV2D_SILU, TENSOR_OPERATION_BASE + 0x0002u,
+                 conv2d_silu_ker, conv2d_silu_lower, 2, 4 * sizeof(extent))
+TENSOR_OPERATION(SILU, TENSOR_OPERATION_BASE + 0x0003u,
+                 silu_ker, silu_lower, 1, 0)
+TENSOR_OPERATION(CONCAT, TENSOR_OPERATION_BASE + 0x0004u,
+                 concat_ker, concat_lower, 0, sizeof(extent))
+TENSOR_OPERATION(MAX_POOL2D, TENSOR_OPERATION_BASE + 0x0005u,
+                 max_pool2d_ker, max_pool2d_lower, 1, 9 * sizeof(extent))
+TENSOR_OPERATION(UPSAMPLE2D, TENSOR_OPERATION_BASE + 0x0006u,
+                 upsample2d_ker, upsample2d_lower, 1, 3 * sizeof(extent))
+TENSOR_OPERATION(RESIZE_PAD_NORM, TENSOR_OPERATION_BASE + 0x0007u,
+                 resize_pad_norm_ker, resize_pad_norm_lower, 1, 0)

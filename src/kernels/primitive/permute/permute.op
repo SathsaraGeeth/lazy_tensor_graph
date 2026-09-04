@@ -1,0 +1,36 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+end define
+declare
+  name permute;
+  id 0x00030005;
+  in x: T [**];
+  out o: T [**];
+  param permutation: uint64 [8];
+end declare
+code begin
+  algorithm direct begin
+    extent stride[64];
+    stride[x_rank - 1] = 1;
+    for (extent d = x_rank - 1; d > 0; --d)
+      stride[d - 1] = stride[d] * x_shape[d];
+    for (extent i = 0; i < o_size; ++i) {
+      extent remaining = i;
+      extent source_index = 0;
+      for (extent d = o_rank; d > 0; --d) {
+        extent output_dimension = d - 1;
+        extent coordinate = remaining % o_shape[output_dimension];
+        source_index += coordinate * stride[permutation[output_dimension]];
+        remaining /= o_shape[output_dimension];
+      }
+      o[i] = x[source_index];
+    }
+    return false;
+  endalgorithm: direct
+endcode
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: (x_rank > 0 ? x_rank - 1 : 0) + point_count * o_rank * 4;
+endhints

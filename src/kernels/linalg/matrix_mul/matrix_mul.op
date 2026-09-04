@@ -1,0 +1,67 @@
+define
+  type      T  = any;
+  devices none = {};
+  devices host = {generic, cpu};
+  devices SIMT = {cuda};
+  dim M;
+  dim K;
+  dim N;
+enddefine
+
+declare
+  name matrix_mul;
+  id 0x00040001;
+  in  a: T [M, K];
+  in  b: T [K, N];
+  out o: T [M, N];
+enddeclare
+
+code begin
+  algorithm naive begin
+    for (uint64 i = 0; i < M; ++i)
+      for (uint64 j = 0; j < N; ++j) {
+        o[i * N + j] = (T)0;
+        for (uint64 k = 0; k < K; ++k)
+          o[i * N + j] = (T)(o[i * N + j] + a[i * K + k] * b[k * N + j]);
+      }
+    return false;
+  endalgorithm: naive
+
+  algorithm reordered begin
+    for (uint64 i = 0; i < M; ++i)
+      for (uint64 j = 0; j < N; ++j) {
+        T acc = (T)0;
+        for (uint64 k = 0; k < K; ++k)
+          acc = (T)(acc + a[i * K + k] * b[k * N + j]);
+        o[i * N + j] = acc;
+      }
+    return false;
+  endalgorithm: reordered
+
+  algorithm _simt begin
+    parallel for (uint64 idx = 0; idx < M * N; ++idx) {
+      uint64 i = idx / N;
+      uint64 j = idx % N;
+
+      T acc = (T)0;
+      for (uint64 k = 0; k < K; ++k) {
+        acc = (T)(acc + a[i * K + k] * b[k * N + j]);
+      }
+      o[idx] = acc;
+    }
+    return false;
+  endalgorithm: _simt
+endcode
+
+hints begin
+  pointwise: false;
+
+  target     naive: none;
+  operations naive: 2 * M * N * K;
+
+  target     reordered: host;
+  operations reordered: 2 * M * N * K;
+
+  target     _simt: SIMT;
+  operations _simt: 2 * M * N * K;
+endhints

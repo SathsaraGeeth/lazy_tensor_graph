@@ -1,0 +1,38 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+end define
+
+declare
+  name brightness;
+  id 0x00010001;
+  in x: T [**];
+  param amount: real32;
+  out o: T [**];
+end declare
+
+code begin
+  algorithm unchanged begin
+  o = x;
+  return false;
+  endalgorithm: unchanged
+
+  algorithm direct begin
+  real64 value = (real64)x + (real64)amount * x_range;
+  if (value < x_min) value = x_min;
+  if (value > x_max) value = x_max;
+  o = (T)value;
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: true;
+  target unchanged: all;
+  operations unchanged: point_count;
+  requires unchanged: amount == 0.0f;
+  target direct: all;
+  operations direct: point_count * 3;
+  prefer unchanged;
+  prefer direct;
+endhints

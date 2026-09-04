@@ -1,0 +1,76 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+  dim C;
+end define
+
+declare
+  name demosaic;
+  id 0x00010006;
+  in x: uint16 [H, W];
+  param bayer: uint32;
+  out o: uint16 [H, W, C];
+end declare
+
+code begin
+  algorithm direct begin
+  for (uint64 y = 0; y < H; ++y)
+    for (uint64 col = 0; col < W; ++col) {
+      uint64 up = y ? y - 1 : y;
+      uint64 down = y + 1 < H ? y + 1 : y;
+      uint64 left = col ? col - 1 : col;
+      uint64 right = col + 1 < W ? col + 1 : col;
+      uint32 row_odd = (uint32)(y & 1);
+      uint32 col_odd = (uint32)(col & 1);
+      uint32 color;
+      if (bayer == 0)
+        color = !row_odd && !col_odd ? 0 : row_odd && col_odd ? 2 : 1;
+      else if (bayer == 1)
+        color = !row_odd && !col_odd ? 2 : row_odd && col_odd ? 0 : 1;
+      else if (bayer == 2)
+        color = !row_odd && col_odd ? 0 : row_odd && !col_odd ? 2 : 1;
+      else
+        color = row_odd && !col_odd ? 0 : !row_odd && col_odd ? 2 : 1;
+      uint16 red, green, blue;
+      uint16 center = x[y * W + col];
+      uint32 border = !y || y + 1 == H || !col || col + 1 == W;
+      uint32 round2 = border ? 0 : 1;
+      uint32 round4 = border ? 0 : 2;
+      uint16 vertical = (uint16)(((uint32)x[up * W + col] +
+                                  x[down * W + col] + round2) >> 1);
+      uint16 horizontal = (uint16)(((uint32)x[y * W + left] +
+                                    x[y * W + right] + round2) >> 1);
+      uint16 cross = (uint16)(((uint32)x[up * W + col] +
+                              x[down * W + col] + x[y * W + left] +
+                              x[y * W + right] + round4) >> 2);
+      uint16 diagonal = (uint16)(((uint32)x[up * W + left] +
+                                 x[up * W + right] + x[down * W + left] +
+                                 x[down * W + right] + round4) >> 2);
+      if (color == 0) {
+        red = center; green = cross; blue = diagonal;
+      } else if (color == 2) {
+        red = diagonal; green = cross; blue = center;
+      } else {
+        uint32 red_horizontal =
+          bayer == 0 ? !row_odd : bayer == 1 ? row_odd :
+          bayer == 2 ? !row_odd : row_odd;
+        green = center;
+        red = red_horizontal ? horizontal : vertical;
+        blue = red_horizontal ? vertical : horizontal;
+      }
+      uint64 index = (y * W + col) * C;
+      o[index] = red;
+      o[index + 1] = green;
+      o[index + 2] = blue;
+    }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H * W * 16;
+endhints

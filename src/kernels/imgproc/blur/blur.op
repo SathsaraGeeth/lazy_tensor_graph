@@ -1,0 +1,47 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+  dim C;
+end define
+
+declare
+  name blur;
+  id 0x00010009;
+  in x: uint16 [H, W, C];
+  out o: uint16 [H, W, C];
+end declare
+
+code begin
+  algorithm direct begin
+  for (uint64 y = 0; y < H; ++y)
+    for (uint64 col = 0; col < W; ++col) {
+      uint64 index = (y * W + col) * C;
+      if (!y || y + 1 == H || !col || col + 1 == W) {
+        o[index] = x[index];
+        o[index + 1] = x[index + 1];
+        o[index + 2] = x[index + 2];
+      } else {
+        uint64 above = index - W * C;
+        uint64 below = index + W * C;
+        for (uint64 channel = 0; channel < 3; ++channel) {
+          uint32 sum =
+            x[above - C + channel] + 2 * x[above + channel] +
+            x[above + C + channel] + 2 * x[index - C + channel] +
+            4 * x[index + channel] + 2 * x[index + C + channel] +
+            x[below - C + channel] + 2 * x[below + channel] +
+            x[below + C + channel];
+          o[index + channel] = (uint16)((sum + 8) >> 4);
+        }
+      }
+    }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H > 2 && W > 2 ? (H - 2) * (W - 2) * 42 : 0;
+endhints

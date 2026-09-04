@@ -1,0 +1,124 @@
+define
+  type    T    = {real32, real64};
+  devices none = {};
+  devices host = {generic, cpu};
+  devices SIMT = {cuda};
+  dim     N;
+enddefine
+
+declare
+  name   matrix_inv_square;
+  id     0x00040002;
+  in  x: T [N, N];
+  out o: T [N, N];
+enddeclare
+
+code begin
+  algorithm gauss_jordan begin
+    real64 aug[2 * N * N];
+
+    for (uint64 r = 0; r < N; ++r)
+      for (uint64 c = 0; c < 2 * N; ++c)
+        aug[r * 2 * N + c] = c < N ? (real64)x[r * N + c] : (real64)(c - N == r);
+
+    for (uint64 col = 0; col < N; ++col) {
+      real64 divisor = aug[col * 2 * N + col];
+
+      if (divisor == 0.0) return true;
+
+      for (uint64 c = 0; c < 2 * N; ++c)
+        aug[col * 2 * N + c] /= divisor;
+
+      for (uint64 r = 0; r < N; ++r) if (r != col) {
+        real64 factor = aug[r * 2 * N + col];
+
+        for (uint64 c = 0; c < 2 * N; ++c)
+          aug[r * 2 * N + c] -= factor * aug[col * 2 * N + c];
+      }
+    }
+
+    for (uint64 r = 0; r < N; ++r)
+      for (uint64 c = 0; c < N; ++c)
+
+        o[r * N + c] = (T)aug[r * 2 * N + N + c];
+    return false;
+  endalgorithm: gauss_jordan
+
+  algorithm pivoted begin
+    real64 aug[2 * N * N];
+    for (uint64 r = 0; r < N; ++r)
+      for (uint64 c = 0; c < 2 * N; ++c)
+        aug[r * 2 * N + c] = c < N ? (real64)x[r * N + c] : (real64)(c - N == r);
+    for (uint64 col = 0; col < N; ++col) {
+      uint64 pivot = col;
+      real64 best = __builtin_fabs(aug[col * 2 * N + col]);
+      
+      for (uint64 r = col + 1; r < N; ++r) {
+        real64 candidate = __builtin_fabs(aug[r * 2 * N + col]);
+
+        if (candidate > best) {
+          best = candidate;
+          pivot = r;
+        }
+      }
+      if (best == 0.0) return true;
+      if (pivot != col)
+        for (uint64 c = 0; c < 2 * N; ++c) {
+          real64 temporary = aug[col * 2 * N + c];
+          aug[col * 2 * N + c] = aug[pivot * 2 * N + c];
+          aug[pivot * 2 * N + c] = temporary;
+        }
+
+      real64 divisor = aug[col * 2 * N + col];
+      for (uint64 c = 0; c < 2 * N; ++c)
+        aug[col * 2 * N + c] /= divisor;
+
+      for (uint64 r = 0; r < N; ++r) if (r != col) {
+        real64 factor = aug[r * 2 * N + col];
+        for (uint64 c = 0; c < 2 * N; ++c)
+          aug[r * 2 * N + c] -= factor * aug[col * 2 * N + c];
+      }
+    }
+
+    for (uint64 r = 0; r < N; ++r)
+      for (uint64 c = 0; c < N; ++c)
+        o[r * N + c] = (T)aug[r * 2 * N + N + c];
+    return false;
+  endalgorithm: pivoted
+
+  algorithm inplace begin
+    for (uint64 i = 0; i < N * N; ++i)
+      o[i] = x[i];
+    for (uint64 k = 0; k < N; ++k) {
+      T pivot = o[k * N + k];
+      if (pivot == (T)0) return true;
+      for (uint64 i = 0; i < N; ++i)
+        if (i != k)
+          for (uint64 j = 0; j < N; ++j)
+            if (j != k)
+              o[i * N + j] = (T)(o[i * N + j]
+                - o[i * N + k] * o[k * N + j] / pivot);
+      for (uint64 i = 0; i < N; ++i)
+        if (i != k)
+          o[i * N + k] = (T)(-o[i * N + k] / pivot);
+      for (uint64 j = 0; j < N; ++j)
+        if (j != k)
+          o[k * N + j] = (T)(o[k * N + j] / pivot);
+      o[k * N + k] = (T)((T)1 / pivot);
+    }
+    return false;
+  endalgorithm: inplace
+endcode
+
+hints begin
+  pointwise: false;
+
+  target     gauss_jordan: none;
+  operations gauss_jordan: 4 * N * N * N;
+  
+  target     pivoted: host;
+  operations pivoted: 4 * N * N * N;
+
+  target     inplace: SIMT;
+  operations inplace: 4 * N * N * N;
+endhints

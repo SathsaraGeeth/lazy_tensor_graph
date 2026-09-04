@@ -1,0 +1,21 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+end define
+declare
+  name reshape;
+  id 0x00030004;
+  in x: T [**];
+  out o: T [**];
+end declare
+code begin
+  algorithm direct begin
+    o = x;
+    return false;
+  endalgorithm: direct
+endcode
+hints begin
+  pointwise: true;
+  target direct: all;
+  operations direct: point_count;
+endhints

@@ -1,0 +1,48 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+  dim C;
+  dim OH;
+end define
+
+declare
+  name chroma_subsample;
+  id 0x0001000b;
+  in x: uint16 [H, W, C];
+  out o: uint16 [OH, W];
+end declare
+
+code begin
+  algorithm direct begin
+  for (uint64 row = 0; row < OH; ++row) {
+    if (row < H) {
+      for (uint64 col = 0; col < W; ++col)
+        o[row * W + col] = x[(row * W + col) * C];
+    } else {
+      uint64 y = (row - H) * 2;
+      for (uint64 col = 0; col < W; col += 2) {
+        uint64 row0 = y * W * C;
+        uint64 row1 = (y + 1) * W * C;
+        uint64 uv = row * W + col;
+        uint64 a = row0 + col * C;
+        uint64 b = row0 + (col + 1) * C;
+        uint64 c = row1 + col * C;
+        uint64 d = row1 + (col + 1) * C;
+        o[uv] = (uint16)(((uint32)x[a + 1] + x[b + 1] +
+                           x[c + 1] + x[d + 1] + 2) >> 2);
+        o[uv + 1] = (uint16)(((uint32)x[a + 2] + x[b + 2] +
+                               x[c + 2] + x[d + 2] + 2) >> 2);
+      }
+    }
+  }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H * W * 5 / 2;
+endhints

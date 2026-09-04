@@ -1,0 +1,110 @@
+define
+  type    T     = any;
+  devices none  = {};
+  devices host  = {generic, cpu};
+  devices SIMT  = {cuda};
+  dim N;
+  dim C;
+  dim H;
+  dim W;
+  dim K;
+  dim R;
+  dim S;
+  dim OH;
+  dim OW;
+enddefine
+
+declare
+  name            conv2d;
+  id              0x00040003;
+  in    input:    T [N, C, H, W];
+  in    weight:   T [K, C, R, S];
+  out   o:        T [N, K, OH, OW];
+  param stride_h: uint64;
+  param stride_w: uint64;
+  param pad_h:    uint64;
+  param pad_w:    uint64;
+enddeclare
+
+code begin
+  algorithm naive begin
+    for (uint64 n = 0; n < N; ++n)
+      for (uint64 k = 0; k < K; ++k)
+        for (uint64 oh = 0; oh < OH; ++oh)
+          for (uint64 ow = 0; ow < OW; ++ow) {
+            o[((n * K + k) * OH + oh) * OW + ow] = (T)0;
+            for (uint64 c = 0; c < C; ++c)
+              for (uint64 r = 0; r < R; ++r)
+                for (uint64 s = 0; s < S; ++s) {
+                  int64 ih = (int64)(oh * stride_h + r) - (int64)pad_h;
+                  int64 iw = (int64)(ow * stride_w + s) - (int64)pad_w;
+                  if (ih >= 0 && ih < (int64)H && iw >= 0 && iw < (int64)W)
+                    o[((n * K + k) * OH + oh) * OW + ow] = (T)(
+                      o[((n * K + k) * OH + oh) * OW + ow]
+                      + input[((n * C + c) * H + (uint64)ih) * W + (uint64)iw]
+                      * weight[((k * C + c) * R + r) * S + s]);
+                }
+          }
+    return false;
+  endalgorithm: naive
+
+  algorithm reordered begin
+    for (uint64 n = 0; n < N; ++n)
+      for (uint64 k = 0; k < K; ++k)
+        for (uint64 oh = 0; oh < OH; ++oh)
+          for (uint64 ow = 0; ow < OW; ++ow) {
+            T acc = (T)0;
+            for (uint64 c = 0; c < C; ++c)
+              for (uint64 r = 0; r < R; ++r)
+                for (uint64 s = 0; s < S; ++s) {
+                  int64 ih = (int64)(oh * stride_h + r) - (int64)pad_h;
+                  int64 iw = (int64)(ow * stride_w + s) - (int64)pad_w;
+                  if (ih >= 0 && ih < (int64)H && iw >= 0 && iw < (int64)W)
+                    acc = (T)(acc
+                        + input[((n * C + c) * H + (uint64)ih) * W + (uint64)iw]
+                        * weight[((k * C + c) * R + r) * S + s]);
+                }
+            o[((n * K + k) * OH + oh) * OW + ow] = acc;
+          }
+    return false;
+  endalgorithm: reordered
+
+  algorithm _simt begin
+    parallel for (uint64 index = 0; index < N * K * OH * OW; ++index) {
+      uint64 ow = index % OW;
+      uint64 q = index / OW;
+      uint64 oh = q % OH;
+      q /= OH;
+      uint64 k = q % K;
+      uint64 n = q / K;
+      T acc = (T)0;
+
+      for (uint64 c = 0; c < C; ++c)
+        for (uint64 r = 0; r < R; ++r)
+          for (uint64 s = 0; s < S; ++s) {
+            int64 ih = (int64)(oh * stride_h + r) - (int64)pad_h;
+            int64 iw = (int64)(ow * stride_w + s) - (int64)pad_w;
+            
+            if (ih >= 0 && ih < (int64)H && iw >= 0 && iw < (int64)W)
+              acc = (T)(acc
+                + input[((n * C + c) * H + (uint64)ih) * W + (uint64)iw]
+                * weight[((k * C + c) * R + r) * S + s]);
+          }
+      o[index] = acc;
+    }
+    return false;
+  endalgorithm: _simt
+endcode
+
+hints begin
+  pointwise: false;
+
+  target     naive: none;
+  operations naive: 2 * N * K * OH * OW * C * R * S;
+
+  target     reordered: host;
+  operations reordered: 2 * N * K * OH * OW * C * R * S;
+
+  target     _simt: SIMT;
+  operations _simt: 2 * N * K * OH * OW * C * R * S;
+endhints

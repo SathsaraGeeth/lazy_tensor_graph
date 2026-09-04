@@ -1,0 +1,29 @@
+#ifndef TENSOR_API
+#define TENSOR_API(return_type, name, args)
+#define TENSOR_API_WAS_UNDEFINED
+#endif
+
+#define TENSOR_OPERATION_BASE 0x00010000u
+#include "imgproc/operations.def"
+#undef TENSOR_OPERATION_BASE
+
+#define TENSOR_OPERATION_BASE 0x00020000u
+#include "dnn/operations.def"
+#undef TENSOR_OPERATION_BASE
+
+#define TENSOR_OPERATION_BASE 0x00030000u
+#include "primitive/operations.def"
+#undef TENSOR_OPERATION_BASE
+
+#define TENSOR_OPERATION_BASE 0x00040000u
+#include "linalg/operations.def"
+#undef TENSOR_OPERATION_BASE
+
+#define TENSOR_OPERATION_BASE 0x00050000u
+#include "finance/operations.def"
+#undef TENSOR_OPERATION_BASE
+
+#ifdef TENSOR_API_WAS_UNDEFINED
+#undef TENSOR_API_WAS_UNDEFINED
+#undef TENSOR_API
+#endif

@@ -1,0 +1,12 @@
+TENSOR_API(vtensor *, tensor_matrix_mul,        (const vtensor *left, const vtensor *right))
+TENSOR_API(vtensor *, tensor_matrix_inv_square, (const vtensor *input))
+TENSOR_API(vtensor *, tensor_conv2d,             (const vtensor *input, const vtensor *weight,
+                                                  extent stride_h, extent stride_w,
+                                                  extent pad_h, extent pad_w))
+
+TENSOR_OPERATION(MATRIX_MUL, TENSOR_OPERATION_BASE + 0x0001u,
+                 matrix_mul_ker, matrix_mul_lower, 2, 0)
+TENSOR_OPERATION(MATRIX_INV_SQUARE, TENSOR_OPERATION_BASE + 0x0002u,
+                 matrix_inv_square_ker, matrix_inv_square_lower, 1, 0)
+TENSOR_OPERATION(LINALG_CONV2D, TENSOR_OPERATION_BASE + 0x0003u,
+                 linalg_conv2d_ker, linalg_conv2d_lower, 2, 4 * sizeof(uint64))

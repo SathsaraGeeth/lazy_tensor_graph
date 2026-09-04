@@ -1,0 +1,33 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim B;
+end define
+
+declare
+  name histogram_equalization;
+  id 0x0001000f;
+  in x: uint32 [B];
+  out o: real32 [B];
+end declare
+
+code begin
+  algorithm direct begin
+  uint64 total = 0, first = 0, cdf = 0;
+  for (uint64 i = 0; i < B; ++i) total += x[i];
+  for (uint64 i = 0; i < B; ++i)
+    if (x[i]) { first = x[i]; break; }
+  for (uint64 i = 0; i < B; ++i) {
+    cdf += x[i];
+    o[i] = total == first ? 0.0f :
+      (real32)(cdf - first) / (real32)(total - first);
+  }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: B * 4;
+endhints

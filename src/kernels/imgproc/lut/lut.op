@@ -1,0 +1,38 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim K;
+end define
+
+declare
+  name lut;
+  id 0x00010008;
+  in x: T [**];
+  in table: real32 [K];
+  out o: T [**];
+end declare
+
+code begin
+  algorithm direct begin
+  uint64 index;
+  if (!x_float && x_min == 0.0 && (real64)(K - 1) == x_range)
+    index = (uint64)x;
+  else {
+    real64 normalized = ((real64)x - x_min) / x_range;
+    index = (uint64)(normalized * (real64)(K - 1) + 0.5);
+  }
+  if (index >= K) index = K - 1;
+  real64 value = x_float ? (real64)table[index] :
+    x_min + (real64)table[index] * x_range;
+  if (value < x_min) value = x_min;
+  if (value > x_max) value = x_max;
+  o = (T)value;
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: true;
+  target direct: all;
+  operations direct: point_count * 9;
+endhints

@@ -1,0 +1,33 @@
+define
+  type      T = {real32, real64};
+  devices all = {generic, cpu, cuda};
+  dim L;
+enddefine
+
+declare
+  name order_book_imbalance;
+  id  0x00050002;
+  in  bid_quantity: T [L];
+  in  ask_quantity: T [L];
+  out            o: T [1];
+enddeclare
+
+code begin
+  algorithm direct begin
+    T bid = (T)0;
+    T ask = (T)0;
+    for (uint64 i = 0; i < L; ++i) {
+      bid = (T)(bid + bid_quantity[i]);
+      ask = (T)(ask + ask_quantity[i]);
+    }
+    T total = (T)(bid + ask);
+    o[0] = total == (T)0 ? (T)0 : (T)((bid - ask) / total);
+    return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise:         false;
+  target direct:     all;
+  operations direct: 2 * L + 3;
+endhints

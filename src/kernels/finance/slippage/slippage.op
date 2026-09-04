@@ -1,0 +1,49 @@
+define
+  type T = {real32, real64};
+  devices all = {generic, cpu, cuda};
+  dim L;
+enddefine
+
+declare
+  name slippage;
+  id 0x00050003;
+  in  price:              T [L];
+  in  available_quantity: T [L];
+  in  order_quantity:     T [1];
+  in  reference_price:    T [1];
+  out o:                  T [1];
+enddeclare
+
+code begin
+  algorithm direct begin
+    T remaining = order_quantity[0];
+    T filled = (T)0;
+    T cost = (T)0;
+
+    if (remaining <= (T)0 || reference_price[0] <= (T)0)
+      return true;
+
+    for (uint64 i = 0; i < L && remaining > (T)0; ++i) {
+      T available = available_quantity[i];
+      if (available > (T)0) {
+        T quantity = available < remaining ? available : remaining;
+        cost = (T)(cost + price[i] * quantity);
+        filled = (T)(filled + quantity);
+        remaining = (T)(remaining - quantity);
+      }
+    }
+
+    if (remaining > (T)0 || filled == (T)0)
+      return true;
+
+    T execution_price = (T)(cost / filled);
+    o[0] = (T)((execution_price - reference_price[0]) / reference_price[0]);
+    return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: 7 * L + 4;
+endhints

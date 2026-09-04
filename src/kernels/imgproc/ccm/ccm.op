@@ -1,0 +1,66 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+  dim C;
+  dim R;
+  dim K;
+end define
+
+declare
+  name ccm;
+  id 0x00010007;
+  in x: uint16 [H, W, C];
+  in matrix: real32 [R, K];
+  param white_level: uint32;
+  out o: uint16 [H, W, C];
+end declare
+
+code begin
+  algorithm direct begin
+  int32 c00 = (int32)(matrix[0] * 4096.0f +
+                      (matrix[0] >= 0.0f ? 0.5f : -0.5f));
+  int32 c01 = (int32)(matrix[1] * 4096.0f +
+                      (matrix[1] >= 0.0f ? 0.5f : -0.5f));
+  int32 c02 = (int32)(matrix[2] * 4096.0f +
+                      (matrix[2] >= 0.0f ? 0.5f : -0.5f));
+  int32 c10 = (int32)(matrix[3] * 4096.0f +
+                      (matrix[3] >= 0.0f ? 0.5f : -0.5f));
+  int32 c11 = (int32)(matrix[4] * 4096.0f +
+                      (matrix[4] >= 0.0f ? 0.5f : -0.5f));
+  int32 c12 = (int32)(matrix[5] * 4096.0f +
+                      (matrix[5] >= 0.0f ? 0.5f : -0.5f));
+  int32 c20 = (int32)(matrix[6] * 4096.0f +
+                      (matrix[6] >= 0.0f ? 0.5f : -0.5f));
+  int32 c21 = (int32)(matrix[7] * 4096.0f +
+                      (matrix[7] >= 0.0f ? 0.5f : -0.5f));
+  int32 c22 = (int32)(matrix[8] * 4096.0f +
+                      (matrix[8] >= 0.0f ? 0.5f : -0.5f));
+  for (uint64 pixel = 0; pixel < H * W; ++pixel) {
+    uint64 index = pixel * C;
+    int32 red = (c00 * (int32)x[index] + c01 * (int32)x[index + 1] +
+                 c02 * (int32)x[index + 2] + 2048) >> 12;
+    int32 green = (c10 * (int32)x[index] + c11 * (int32)x[index + 1] +
+                   c12 * (int32)x[index + 2] + 2048) >> 12;
+    int32 blue = (c20 * (int32)x[index] + c21 * (int32)x[index + 1] +
+                  c22 * (int32)x[index + 2] + 2048) >> 12;
+    if (red < 0) red = 0;
+    if (green < 0) green = 0;
+    if (blue < 0) blue = 0;
+    if ((uint32)red > white_level) red = (int32)white_level;
+    if ((uint32)green > white_level) green = (int32)white_level;
+    if ((uint32)blue > white_level) blue = (int32)white_level;
+    o[index] = (uint16)red;
+    o[index + 1] = (uint16)green;
+    o[index + 2] = (uint16)blue;
+  }
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: false;
+  target direct: all;
+  operations direct: H * W * 21 + 18;
+endhints

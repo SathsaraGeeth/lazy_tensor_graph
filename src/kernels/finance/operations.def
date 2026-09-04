@@ -1,0 +1,15 @@
+TENSOR_API(vtensor *, tensor_microprice,
+           (const vtensor *bid_price, const vtensor *bid_quantity,
+            const vtensor *ask_price, const vtensor *ask_quantity))
+TENSOR_API(vtensor *, tensor_order_book_imbalance,
+           (const vtensor *bid_quantity, const vtensor *ask_quantity))
+TENSOR_API(vtensor *, tensor_slippage,
+           (const vtensor *price, const vtensor *available_quantity,
+            const vtensor *order_quantity, const vtensor *reference_price))
+
+TENSOR_OPERATION(MICROPRICE, TENSOR_OPERATION_BASE + 0x0001u,
+                 microprice_ker, microprice_lower, 4, 0)
+TENSOR_OPERATION(ORDER_BOOK_IMBALANCE, TENSOR_OPERATION_BASE + 0x0002u,
+                 order_book_imbalance_ker, order_book_imbalance_lower, 2, 0)
+TENSOR_OPERATION(SLIPPAGE, TENSOR_OPERATION_BASE + 0x0003u,
+                 slippage_ker, slippage_lower, 4, 0)

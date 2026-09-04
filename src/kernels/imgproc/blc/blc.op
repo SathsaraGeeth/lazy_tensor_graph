@@ -1,0 +1,48 @@
+define
+  type T = any;
+  devices all = {generic, cpu, cuda};
+  dim H;
+  dim W;
+end define
+
+declare
+  name blc;
+  id 0x00010003;
+  in x: uint16 [H, W];
+  param r: real32;
+  param gr: real32;
+  param gb: real32;
+  param b: real32;
+  param bayer: uint32;
+  param white_level: uint32;
+  out o: uint16 [H, W];
+end declare
+
+code begin
+  algorithm direct begin
+  uint64 y = point_index / W;
+  uint64 col = point_index - y * W;
+  real32 level;
+  uint32 row_odd = (uint32)(y & 1);
+  uint32 col_odd = (uint32)(col & 1);
+  if (bayer == 0)
+    level = row_odd ? (col_odd ? b : gb) : (col_odd ? gr : r);
+  else if (bayer == 1)
+    level = row_odd ? (col_odd ? r : gr) : (col_odd ? gb : b);
+  else if (bayer == 2)
+    level = row_odd ? (col_odd ? gb : b) : (col_odd ? r : gr);
+  else
+    level = row_odd ? (col_odd ? gr : r) : (col_odd ? b : gb);
+  int32 value = (int32)x - (int32)(level + 0.5f);
+  if (value < 0) value = 0;
+  if ((uint32)value > white_level) value = (int32)white_level;
+  o = (uint16)value;
+  return false;
+  endalgorithm: direct
+endcode
+
+hints begin
+  pointwise: true;
+  target direct: all;
+  operations direct: point_count * 4;
+endhints
