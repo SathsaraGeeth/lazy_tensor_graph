@@ -17,19 +17,16 @@
 
 /*
  * Comments:
- * 1. Generates JIT kernels for fused ones
- *    the .op->parser-->SSA scalar(as .bc) is
- *    per .op/kernel they don't aware about fusion
- *    as it is runtime decision made by the graph/
- *    and graph/fusion.c do the fusion thingy
- *    transparenlty to whole library and to the user - it 
- *    rewrites the metadata of the nodes/vtensors so
- *    the graph now is fused and still safe
- *    it chnages the op (and other metas but not the concern of this
- *    file) this file basically parse that new op and
- *    figure out how to generate a fused kernel with
- *    just one outer loop so all the data remains in cpu
- *    regs no round trips to stack
+ * 1. Generates JIT kernels for fused operations.
+ *    The .op->parser-->SSA scalar(as .bc) is per .op/kernel; they are
+ *    not aware of fusion, as it is a runtime decision made by
+ *    graph/graph/fusion.c. It performs fusion transparently to the whole
+ *    library and user. It rewrites node/vtensor metadata so the graph
+ *    is fused and still safe. It changes the op (and other metadata,
+ *    but that is not the concern of this file). This file parses that
+ *    new op and figures out how to generate a fused kernel with one
+ *    outer loop, so all data remains in CPU registers with no round
+ *    trips to the stack.
  */
 
 #ifndef TENSOR_CPU_FUSED_JIT_H

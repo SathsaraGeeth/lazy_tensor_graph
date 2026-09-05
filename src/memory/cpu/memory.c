@@ -17,10 +17,10 @@
 
 /*
  * Comments:
- * 1. allocator is bump alocator
- * 2. chunks are aligned to page (cpu specific details)
- * 3. blocks are aligned to cache line (cpu specific details)
- * 4. there can be multiple chucks in the pool, as the graph
+ * 1. allocator is bump allocator
+ * 2. chunks are aligned to pages (CPU specific details)
+ * 3. blocks are aligned to cache lines (CPU specific details)
+ * 4. there can be multiple chunks in the pool, as graph
  *    evaluation is demand based
  */
 

@@ -17,13 +17,13 @@
 
 /*
  * Comments:
- * 1. Jit cache is thread safe so the environment/os
- *    support some sort of lock/atomics/condition
+ * 1. JIT cache is thread safe, so the environment/OS
+ *    supports some sort of lock/atomics/condition
  *    - written using pthread_mutex, pthread_cond
  * 2. This file is platform dependent
  *    - TODO: make it platform independent
  * 3. The key is serialized
- *    - so jit cache can use between processes
+ *    - so JIT cache can be used between processes
  *    - it looks like this in the file
  *     +----------------+
  *     | magic          |
@@ -38,17 +38,13 @@
  *    tensor_device_jit_compile(
  *    device dev, const jit_cache_key_t *key);
  *    tensor_device_jit_compatibility_hash(device dev)
- * 5. The graph.c or the user need to 
- *    do this tensor_get_jit_cache(void)
- *    just need to call the tensor_jit_cache_init()
- *    or can use the presistent too
- * 6. Compatbility field is not carry reduntant
- *    information (alongside with the device embedded in the key)
- *    it tells something similar to the idea
- *    is the cached runtime comaptible the current device
- *    runtime settings - otherwise for example if the device first
- *    run with say ffast_math enabled and then try to run with 
- *    ffast_math supressed it is not compatible
+ * 5. graph.c or the user needs to call tensor_jit_cache_init()
+ *    before calling tensor_get_jit_cache(), or use the persistent cache
+ * 6. Compatibility field does not carry redundant
+ *    information alongside the device embedded in the key.
+ *    It identifies whether the cached runtime is compatible with the
+ *    current device runtime settings. For example, a runtime compiled
+ *    with ffast_math enabled is not compatible with one that suppresses it.
  */
 
 #include "tensor_jit.h"
@@ -66,7 +62,7 @@ static uint64 tensor_probe_time_ns(void) {
 
 /*
  * How to compile a kernel for a given key?
- * backend specific impl private to each
+ * backend specific implementation private to each
  */
 
 extern jit_ker_t tensor_device_jit_compile            (device dev, const jit_cache_key_t *key,

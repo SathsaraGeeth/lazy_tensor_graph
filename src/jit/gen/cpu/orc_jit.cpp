@@ -18,9 +18,9 @@
 /*
  * Comments:
  *  1. .op--parser-->SSA scalar(as .bc)->
- *     graph.c prefethcer or serilized file->parallelizer->vectorizer->
+ *     graph.c prefetcher or serialized file->parallelizer->vectorizer->
  *     this_file->jit_cache
- *  2. Similar to the generic/orc_jit.cpp but little more involved
+ *  2. Similar to generic/orc_jit.cpp but a little more involved
  */
 
 #include "tensor_jit.h"

@@ -18,17 +18,17 @@
 /*
  * Comments:
  * 1. Reference: https://llvm.org/docs/Vectorizers.html
- * 2. TODO: look at here https://llvm.org/docs/SandboxVectorizer.html
- *          it can evaluate the profitability then either commit or
- *          rollback the vecotrization
- * 3. Here currently the llvm production autovectorization is used
- *    - loop_vecotrizer: widen the loop
+ * 2. TODO: look here https://llvm.org/docs/SandboxVectorizer.html
+ *          it can evaluate profitability, then either commit or
+ *          roll back the vectorization
+ * 3. Currently, the LLVM production autovectorization is used
+ *    - loop_vectorizer: widen the loop
  *    - SLP vectorizer:  combine similar independent scalar instructions
  * 4. The kernel generator is expected to emit portable scalar SSA
- *    provided that llvm choose the simd_width and instructions
+ *    while LLVM chooses the SIMD width and instructions
  * 5. .op--parser-->SSA scalar(as .bc)->
- *     graph.c prefethcer or serilized file->parrallizer->this_file->orc_jit.cpp->jit_cache
- * 6.  The order matter parrallize->vectorize
+ *     graph.c prefetcher or serialized file->parallelizer->this_file->orc_jit.cpp->jit_cache
+ * 6.  The order matters: parallelize->vectorize
  */
 
 #ifndef TENSOR_JIT_CPU_ABSTRACT_VEC_H

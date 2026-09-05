@@ -17,11 +17,10 @@
 
 /*
  * Comments:
- * 1. Shared  memory region definion for profiler.
+ * 1. Shared memory region definition for profiler.
  * 2. Lock free to reduce syncing overhead.
- * 3. External process polls this region
- *    So the profiler can have aliasing
- *    if the polling process is slow
+ * 3. An external process polls this region; profiler data can alias
+ *    if the polling process is slow.
  */
 
 #ifndef TENSOR_PROFILER_SHARED_H

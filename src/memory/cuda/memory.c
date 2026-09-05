@@ -17,7 +17,7 @@
 
 /*
  * Comments:
- * 1. cuda specific memory implementation
+ * 1. CUDA specific memory implementation
  */
 
 #include "memory.h"

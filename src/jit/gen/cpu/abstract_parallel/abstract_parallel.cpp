@@ -18,14 +18,14 @@
 /*
  * Comments:
  * 1. Reference: https://llvm.org/doxygen/classllvm_1_1Loop.html
- * 2. TODO: look at here 
+ * 2. TODO: look here
  *    https://llvm.org/devmtg/2018-04/slides/Finkel-Representing%20Parallelism%20Within%20LLVM.pdf
- * 3. Here currently the llvm production autovectorization is used
- *    - loop_vecotrizer: widen the loop
+ * 3. Currently, the LLVM production autovectorization is used
+ *    - loop_vectorizer: widen the loop
  *    - SLP vectorizer:  combine similar independent scalar instructions
- * 4. The kernel generator is expected to has one outer loop whose 
+ * 4. The kernel generator is expected to have one outer loop whose
  *    iterations are independent
- *    then this partition that loop across the thread pool and
+ *    then this partitions the loop across the thread pool and
  *    modify the original kernel into a worker function (and rename)
  *    then use the original name for the dispatcher of the worker dispatcher
  *    e.g.
@@ -46,10 +46,10 @@
  *           }
  * 
  * 5. .op--parser-->SSA scalar(as .bc)->
- *     graph.c prefethcer or serilized file->this_file->vectorizer->orc_jit.cpp->jit_cache
- * 6. The order matter parrallize->vectorize
- * 7. This make a thread pool one subgraph's work queue
- *    so thread init dont happen per kernel calls
+ *     graph.c prefetcher or serialized file->this_file->vectorizer->orc_jit.cpp->jit_cache
+ * 6. The order matters: parallelize->vectorize
+ * 7. This makes the thread pool a subgraph work queue,
+ *    so thread initialization does not happen per kernel call
  */
 
 #include "abstract_parallel.h"

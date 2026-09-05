@@ -17,7 +17,7 @@
 
 /*
  * Comments:
- * 1. Shared  memory region definion for profiler.
+ * 1. Shared memory region definition for profiler.
  */
 
 #ifndef TENSOR_PROFILER_TRACE_H
