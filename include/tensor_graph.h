@@ -19,9 +19,6 @@
  * Comments:
  * 1. Lazy
  * 2. FROZEN
- * 3. The graph's structure is csr + csr_reversed
- *    this comes for free when the user calls the lazy methods,
- *    as those are essentially the parameters
  */
 
 #ifndef TENSOR_TENSOR_GRAPH_H
