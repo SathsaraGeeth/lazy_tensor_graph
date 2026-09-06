@@ -28,6 +28,10 @@
 
 extern  tensor_profile_region *tensor_profile_shared_region;
 
+void tensor_profile_record(const char *type, const char *name,
+                           uint64 id, uint64 parent, uint32 operation,
+                           dtype_t dtype, uint64 bytes, uint64 operations);
+
 #define tensor_profile_count_operation(operation) do { \
     tensor_profile_region *_region = tensor_profile_shared_region; \
     if (_region) \

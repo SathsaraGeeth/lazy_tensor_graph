@@ -13,7 +13,7 @@ case "$backend" in
 esac
 
 if [[ -z "${LLVM_CONFIG:-}" ]]; then
-  for candidate in llvm-config-18 llvm-config "$(brew --prefix llvm@18 2>/dev/null || true)/bin/llvm-config"; do
+  for candidate in llvm-config-18 llvm-config; do
     if [[ -n "$candidate" ]] && command -v "$candidate" >/dev/null 2>&1; then
       LLVM_CONFIG="$(command -v "$candidate")"
       break
@@ -22,7 +22,7 @@ if [[ -z "${LLVM_CONFIG:-}" ]]; then
 fi
 
 if [[ -z "${LLVM_CONFIG:-}" ]]; then
-  echo "LLVM 18 is required. Install it with: brew install llvm@18" >&2
+  echo "LLVM 18 is required. Install the llvm-18 development package." >&2
   exit 1
 fi
 
@@ -37,11 +37,5 @@ if ! command -v "$cc" >/dev/null || ! command -v "$cxx" >/dev/null; then
 fi
 
 openmp_flags="${OPENMP_FLAGS:--fopenmp}"
-if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null; then
-  omp_prefix="$(brew --prefix libomp 2>/dev/null || true)"
-  if [[ -n "$omp_prefix" ]]; then
-    openmp_flags="-fopenmp -I$omp_prefix/include -L$omp_prefix/lib -Wl,-rpath,$omp_prefix/lib"
-  fi
-fi
 
 exec make -C "$root_dir" TARGET=host TENSOR_BACKEND="$backend" LLVM_CONFIG="$LLVM_CONFIG" CLANG="$cc" CC="$cc" CXX="$cxx" OPENMP_FLAGS="$openmp_flags" "$@"

@@ -1,4 +1,5 @@
 #include "tensor_graph.h"
+#include "dev_tools/profiler/trace.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -7,6 +8,8 @@
 void graph_register(vtensor *node);
 void graph_edge_free(edge_t *edge);
 boolean graph_fusion_rewrite(vtensor *output);
+const char *graph_operation_name(uint32 operation);
+uint64 graph_node_id(const vtensor *node);
 
 static extent storage_bytes(extent rank, const extent *shape, dtype_t dtype) {
     extent bytes = dtype_size(dtype);
@@ -46,6 +49,8 @@ vtensor *graph_sketch_alloc(extent rank, const extent *shape, dtype_t dtype, ext
     node->dtype = dtype;
     node->num_live_static_ref = static_refs;
     graph_register(node);
+    tensor_profile_record("NODE_ALLOC", "ALLOC", graph_node_id(node), 0, 0,
+                          dtype, bytes, 0);
     return node;
 
 failed:
@@ -85,6 +90,14 @@ boolean graph_sketch_operation(op_t operation, vtensor *output, const vtensor **
     output->num_parents = operation.input_count;
     output->state = UNMAT;
     if (graph_fusion_rewrite(output)) return true;
+    uint32 sketched_operation = output->edge->op.op;
+    tensor_profile_record("NODE_OP", graph_operation_name(sketched_operation),
+                          graph_node_id(output), 0, sketched_operation,
+                          output->dtype, 0, 0);
+    for (extent i = 0; i < output->num_parents; ++i)
+        tensor_profile_record("EDGE", "dependency", graph_node_id(output),
+                              graph_node_id(output->parents[i]),
+                              sketched_operation, output->dtype, 0, 0);
     return false;
 
 failed:

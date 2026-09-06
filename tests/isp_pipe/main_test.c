@@ -13,7 +13,7 @@
 #define CHANNEL_PATH    "tests/isp_pipe/processed/test_green.png"
 #endif
 
-int main(void) {
+int main(int argc, char **argv) {
     int width    = 0;
     int height   = 0;
     int channels = 0;
@@ -49,8 +49,24 @@ int main(void) {
     vtensor *green_u16   = tensor_cast(green, UINT16);
     vtensor *green_u8    = tensor_cast(green_u16, UINT8);
 
-    const uint8 *crop_pixels = (const uint8 *)tensor_lazy_view_to(crop);
-    const uint8 *green_pixels = (const uint8 *)tensor_lazy_view_to(green_u8);
+    unsigned long iterations = 1;
+    if (argc == 2) {
+        char *end = NULL;
+        iterations = strtoul(argv[1], &end, 10);
+        if (!iterations || !end || *end) {
+            fprintf(stderr, "usage: %s [ITERATIONS]\n", argv[0]);
+            stbi_image_free(pixels);
+            return 1;
+        }
+    }
+
+    const uint8 *crop_pixels = NULL;
+    const uint8 *green_pixels = NULL;
+    for (unsigned long iteration = 0; iteration < iterations; ++iteration) {
+        tensor_lazy_view_from(input, (dptr *)pixels);
+        crop_pixels = (const uint8 *)tensor_lazy_view_to(crop);
+        green_pixels = (const uint8 *)tensor_lazy_view_to(green_u8);
+    }
 
 
     int failed = !input || !bright || !gamma || !crop || !transposed ||

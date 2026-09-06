@@ -48,6 +48,7 @@
  */
 
 #include "tensor_jit.h"
+#include "dev_tools/profiler/trace.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -362,6 +363,13 @@ jit_ker_t tensor_jit_get(jit_cache_key_t key, jit_cache_t cache) {
         return NULL;
     }
 
+    const char *lookup = "JIT CACHE LOOKUP";
+    uint32 operation = key.op;
+    dtype_t dtype = key.output.dtype;
+    uint8 trace_scope;
+    uint64 trace_id = (uint64)(uintptr_t)&trace_scope;
+    tensor_profile_record("JIT_LOOKUP_BEGIN", lookup, trace_id, 0, operation,
+                          dtype, 0, 0);
     uint64 probe_started = tensor_probe_time_ns();
     pthread_mutex_lock(&cache->lock);
 
@@ -378,6 +386,11 @@ jit_ker_t tensor_jit_get(jit_cache_key_t key, jit_cache_t cache) {
 
         pthread_mutex_unlock(&cache->lock);
 
+        tensor_profile_record("JIT_CACHE_HIT", lookup, trace_id, 0, operation,
+                              dtype, 0, 0);
+        tensor_profile_record("JIT_LOOKUP_END", lookup, trace_id, 0, operation,
+                              dtype, 0, 0);
+
         if (getenv("TENSOR_TIMING_PROBES"))
             fprintf(stderr, "[tensor probe] jit_cache hit_lookup=%.3f us wait_return=%.3f us\n",
                     (probe_found - probe_started) / 1000.0,
@@ -392,6 +405,8 @@ jit_ker_t tensor_jit_get(jit_cache_key_t key, jit_cache_t cache) {
     if (!entry) {
         pthread_mutex_unlock(&cache->lock);
         key_clear(&key);
+        tensor_profile_record("JIT_LOOKUP_END", lookup, trace_id, 0, operation,
+                              dtype, 0, 0);
         return NULL;
     }
 
@@ -401,8 +416,21 @@ jit_ker_t tensor_jit_get(jit_cache_key_t key, jit_cache_t cache) {
 
     pthread_mutex_unlock(&cache->lock);
 
+    tensor_profile_record("JIT_CACHE_MISS", lookup, trace_id, 0, operation,
+                          dtype, 0, 0);
+    tensor_profile_record("JIT_LOOKUP_END", lookup, trace_id, 0, operation,
+                          dtype, 0, 0);
+
+    uint8 compile_scope;
+    uint64 compile_id = (uint64)(uintptr_t)&compile_scope;
+    tensor_profile_record("JIT_MATERIALIZE_BEGIN", "JIT MATERIALIZE",
+                          compile_id, 0, entry->key.op,
+                          entry->key.output.dtype, 0, 0);
     jit_ker_t kernel = tensor_device_jit_compile(entry->key.dev, &entry->key,
                                                  &entry->object, &entry->object_size);
+    tensor_profile_record("JIT_MATERIALIZE_END", "JIT MATERIALIZE",
+                          compile_id, 0, entry->key.op,
+                          entry->key.output.dtype, entry->object_size, 0);
 
     pthread_mutex_lock(&cache->lock);
 

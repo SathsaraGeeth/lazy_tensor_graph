@@ -1,4 +1,5 @@
 #include "internal.h"
+#include "dev_tools/profiler/trace.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@ static mem_pool *pool;
 static free_block *available;
 
 void graph_shutdown(void);
+uint64 graph_node_id(const vtensor *node);
 
 static void free_available(void) {
     while (available) {
@@ -111,6 +113,10 @@ boolean exec_allocate(exec_context *context, vtensor *node) {
         node->phy_tensor = NULL;
         return true;
     }
+    tensor_profile_record("NODE_PHYSICAL", "tensor",
+                          (uint64)(uintptr_t)node->phy_tensor,
+                          graph_node_id(node), 0, node->dtype,
+                          node->phy_tensor->data->size, 0);
     return false;
 }
 

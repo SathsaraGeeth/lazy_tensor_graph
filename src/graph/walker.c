@@ -1,4 +1,5 @@
 #include "tensor_graph.h"
+#include "dev_tools/profiler/trace.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -23,6 +24,8 @@ boolean graph_do_submit(void *queue);
 void graph_do_destroy(void *queue);
 boolean graph_jit_prepare(vtensor *node);
 boolean graph_do_enqueue_memory(void *queue, vtensor *node);
+const char *graph_operation_name(uint32 operation);
+uint64 graph_node_id(const vtensor *node);
 
 typedef struct {
     vtensor **nodes;
@@ -55,6 +58,10 @@ static boolean discover(vtensor *node, void *queue, walk_state *state) {
     if (node->state == MAT && node->phy_tensor && node->phy_tensor->data) return false;
     if (was_seen(state, node)) return false;
     if (mark_seen(state, node)) return true;
+
+    uint32 operation = node->edge->kind == IR_NODE ? node->edge->op.op : 0;
+    tensor_profile_record("NODE_REQUEST", graph_operation_name(operation),
+                          graph_node_id(node), 0, operation, node->dtype, 0, 0);
 
     for (extent i = 0; i < node->num_parents; ++i)
         if (discover(node->parents[i], queue, state)) return true;

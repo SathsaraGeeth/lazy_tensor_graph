@@ -9,7 +9,7 @@ CLANG ?= clang-18
 ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 LIB_DIR ?= $(ROOT_DIR)/lib
 OPENMP_FLAGS ?= -fopenmp
-SHARED_LIBRARY ?= $(LIB_DIR)/libtensor.dylib
+SHARED_LIBRARY ?= $(LIB_DIR)/libtensor.so
 
 SRCS = src/core/tensor.c \
        src/graph/graph.c \
@@ -88,7 +88,7 @@ CC ?= cc
 CXX ?= c++
 SRCS += src/dev_tools/profiler/runtime/host.c
 CFLAGS = -Wall -Wextra -O3 -march=native -fPIC $(OPENMP_FLAGS) -I$(ROOT_DIR)/include -I. -Iinclude
-CXXFLAGS = -O3 -march=native -iquote $(ROOT_DIR)/include -I. -Iinclude \
+CXXFLAGS = -O3 -march=native -fPIC -iquote $(ROOT_DIR)/include -I. -Iinclude \
            $(shell $(LLVM_CONFIG) --cxxflags)
 else
 SRCS += src/dev_tools/profiler/runtime/generic.c
@@ -114,7 +114,7 @@ all: $(SHARED_LIBRARY)
 $(SHARED_LIBRARY): $(OBJS) FORCE
 	mkdir -p $(LIB_DIR)
 	rm -f $@
-	$(CXX) -dynamiclib -o $@ $(OBJS) $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) $(OPENMP_FLAGS)
+	$(CXX) -shared -o $@ $(OBJS) $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native core) $(OPENMP_FLAGS)
 
 $(GENERATED_STAMP): $(OP_FILES) $(wildcard src/op_parser/*.py)
 	@mkdir -p $(dir $@)

@@ -1,6 +1,6 @@
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-CC      := $(shell brew --prefix llvm@18)/bin/clang
+CC      ?= clang-18
 OPENMP_FLAGS ?= -fopenmp
 CFLAGS  := -Wall -Wextra -g -O0 -std=c11
 CFLAGS  += -I../../include
@@ -8,7 +8,7 @@ CFLAGS  += $(OPENMP_FLAGS)
 CFLAGS  += -DENABLE_GRAPH_TRACE
 
 ROOT    := ../..
-LIB     := $(ROOT)/lib/libtensor.dylib
+LIB     := $(ROOT)/lib/libtensor.so
 BUILD   := ../../build/yolo
 BIN     := $(BUILD)/yolo_test
 
@@ -28,7 +28,7 @@ lib:
 
 $(BIN): $(OBJS) $(LIB)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $^ -o $@ -L$(ROOT)/lib -ltensor -Wl,-rpath,$(ROOT)/lib -lm $(OPENMP_FLAGS)
+	$(CC) $(CFLAGS) $(OBJS) -o $@ -L$(ROOT)/lib -ltensor -Wl,-rpath,'$$ORIGIN/../../lib' -lm $(OPENMP_FLAGS)
 	@echo ">>> Built: $@"
 
 $(BUILD)/%.o: %.c

@@ -25,6 +25,7 @@
  */
 
 #include "memory.h"
+#include "dev_tools/profiler/trace.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +52,20 @@ struct mem_pool {
 };
 
 static mem_pool *active_pool;
+
+static uint64_t profile_begin(const char *name, uint32_t operation,
+                              extent bytes, const void *scope) {
+    uint64_t id = (uint64_t)(uintptr_t)scope;
+    tensor_profile_record("LIB_BEGIN", name, id, 0, operation,
+                          DTYPE_UNKNOWN, bytes, 0);
+    return id;
+}
+
+static void profile_end(const char *name, uint64_t id, uint32_t operation,
+                        extent bytes) {
+    tensor_profile_record("LIB_END", name, id, 0, operation,
+                          DTYPE_UNKNOWN, bytes, 0);
+}
 
 static extent align_up(extent size, extent alignment) {
     return (size + alignment - 1) & ~(alignment - 1);
@@ -100,6 +115,10 @@ static mem_block *alloc_from_pool(mem_pool *pool, extent size) {
     pool->last->used += aligned_size;
     pool->allocated  += aligned_size;
 
+    tensor_profile_record("POOL_ALLOC", "lazy_data",
+                          (uint64_t)(uintptr_t)block, pool->planned, 0,
+                          DTYPE_UNKNOWN, pool->capacity, pool->allocated);
+
     return block;
 }
 
@@ -109,7 +128,11 @@ mem_pool *mem_pool_init(void) {
 }
 
 void mem_pool_plan(mem_pool *pool, extent size) {
-    if (pool) pool->planned += align_up(size, LINE_SIZE);
+    if (pool) {
+        pool->planned += align_up(size, LINE_SIZE);
+        tensor_profile_record("POOL_PLAN", "lazy_data", 0, 0, 0,
+                              DTYPE_UNKNOWN, size, pool->planned);
+    }
 }
 
 void mem_pool_set_cleanup(mem_pool *pool, void (*cleanup)(void)) {
@@ -117,6 +140,9 @@ void mem_pool_set_cleanup(mem_pool *pool, void (*cleanup)(void)) {
 }
 
 mem_block *mem_alloc(extent size, boolean is_pooled, mem_pool *pool) {
+    uint8 trace_scope;
+    uint64_t trace_id = profile_begin("mem_alloc", is_pooled, size,
+                                      &trace_scope);
     mem_block *block = NULL;
 
     if (!size) goto done;
@@ -143,6 +169,7 @@ mem_block *mem_alloc(extent size, boolean is_pooled, mem_pool *pool) {
     block->is_pooled = false;
 
 done:
+    profile_end("mem_alloc", trace_id, is_pooled, size);
     return block;
 }
 
@@ -162,20 +189,34 @@ mem_block *mem_view_from(extent size, const dptr *data) {
 }
 
 boolean mem_free(mem_block *block) {
+    extent bytes = block ? block->size : 0;
+    uint32_t storage_kind = !block ? 0 : block->is_pooled ? 1u
+                                  : block->is_owner ? 0u : 2u;
+    uint8 trace_scope;
+    uint64_t trace_id = profile_begin("mem_free", storage_kind, bytes,
+                                      &trace_scope);
     boolean failed = !block;
     if (!failed) {
-        if (block->is_owner && !block->is_pooled) free(block->ptr);
+        if (block->is_owner && !block->is_pooled) {
+            free(block->ptr);
+            tensor_profile_record("HEAP_RELEASE", "owned_storage", 0, 0, 0,
+                                  DTYPE_UNKNOWN, bytes, 0);
+        }
         free(block);
     }
+    profile_end("mem_free", trace_id, storage_kind, bytes);
     return failed;
 }
 
 boolean mem_copy(mem_block *dst, const mem_block *src, extent size) {
+    uint8 trace_scope;
+    uint64_t trace_id = profile_begin("mem_copy", 0, size, &trace_scope);
     boolean failed = !dst || !src || !dst->ptr ||
                      !src->ptr || size > dst->size || size > src->size;
 
     if (!failed) memcpy(dst->ptr, src->ptr, size);
 
+    profile_end("mem_copy", trace_id, 0, size);
     return failed;
 }
 
@@ -206,6 +247,8 @@ void mem_pool_shutdown(void) {
     mem_pool *pool = active_pool;
 
     if (pool) {
+        tensor_profile_record("POOL_SHUTDOWN", "lazy_session", 0, 0, 0,
+                              DTYPE_UNKNOWN, pool->capacity, 0);
         void (*cleanup)(void) = pool->cleanup;
         pool->cleanup = NULL;
         if (cleanup) cleanup();

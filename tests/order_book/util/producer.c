@@ -535,11 +535,20 @@ static bool connect_worker(NetworkWorker *worker) {
                          offset ? "/" : "", stream->symbols[index]);
     }
     worker->ws = curl_easy_init();
+    char error[CURL_ERROR_SIZE] = {0};
     if (worker->ws) {
         curl_easy_setopt(worker->ws, CURLOPT_URL, url);
         curl_easy_setopt(worker->ws, CURLOPT_CONNECT_ONLY, 2L);
+        curl_easy_setopt(worker->ws, CURLOPT_ERRORBUFFER, error);
+        curl_easy_setopt(worker->ws, CURLOPT_CONNECTTIMEOUT, 10L);
     }
-    bool connected = worker->ws && curl_easy_perform(worker->ws) == CURLE_OK;
+    CURLcode result = worker->ws ? curl_easy_perform(worker->ws)
+                                 : CURLE_FAILED_INIT;
+    bool connected = result == CURLE_OK;
+    if (!connected)
+        fprintf(stderr, "WebSocket connection failed: %s%s%s%s\n",
+                curl_easy_strerror(result), error[0] ? " (" : "",
+                error[0] ? error : "", error[0] ? ")" : "");
     free(url);
     return connected;
 }
